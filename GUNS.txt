@@ -1,0 +1,5 @@
+www.google.com 8.8.8.8
+www.facebook.com 157.240.2.35
+www.gmail.com 216.58.217.5
+www.bing.com 204.79.197.200
+www.colorado.edu 128.138.129.98
