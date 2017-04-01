@@ -49,20 +49,43 @@ void extract_string_lookup(char* buffer, int size)
 	delete []buffer_1;
 }
 
+char * send_dns_ip()
+{
+	
+	char *buffer = new char[BUFFLEN];
+	char *buffer1 = new char[BUFFLEN];
+	std::string filename="GUNS.txt";
+	std::ifstream f1(filename.c_str());
+	for(int i = 0; f1.getline(buffer, BUFFLEN);i++)
+	{
+		strcat(buffer1, " ");
+		strcat(buffer1, buffer);
+	}
+	return buffer1;
+}
+
 int main()
 {
 
 	char buffer[BUFFLEN];
+	char *buff = NULL;
 	memset(buffer,'\0',BUFFLEN);
 	int n=0;
  	struct sockaddr_in si_other;
  	socklen_t slen;
+ 	
 	udp_server *u1=new udp_server("10.201.29.104",10000);
-	//while(1)
-	//{
-		//u1->myrecvfrom(buffer,BUFFLEN,&si_other,&slen);
-        //std::cout<<"Received "<<buffer<<std::endl;
-      	//u1->mysendto(buffer,strlen(buffer),&si_other,slen);
-	//}	
+	while(1)
+	{
+		u1->myrecvfrom(buffer,BUFFLEN,&si_other,&slen);
+		if(!strcmp(buffer,"JOIN"))
+		{
+			buff = send_dns_ip();
+			u1->mysendto(buff,strlen(buff),&si_other,slen);
+		}
+
+        std::cout<<"Received "<<buffer<<std::endl;
+      	u1->mysendto(buffer,strlen(buffer),&si_other,slen);
+	}	
 	extract_string_lookup(buffer, BUFFLEN);
 }
