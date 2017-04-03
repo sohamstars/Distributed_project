@@ -3,3 +3,8 @@ www.facebook.com 157.240.2.35
 www.gmail.com 216.58.217.5
 www.bing.com 204.79.197.200
 www.colorado.edu 128.138.129.98
+www.slack.com 54.192.9.118
+www.yahoo.com 98.138.253.109
+www.stackoverflow.com 151.101.129.69
+www.bbc.com 151.101.48.81
+www.msn.com 204.79.197.203

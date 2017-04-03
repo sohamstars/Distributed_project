@@ -65,7 +65,7 @@ public:
 
     //int                 recv(char *msg, size_t max_size);
     int                 myrecvfrom(char *msg, size_t max_size, struct sockaddr_in *si_other, socklen_t *slen);
-    size_t                mysendto(char *msg, size_t max_size, struct sockaddr_in *,socklen_t slen);
+    int                mysendto(char *msg, size_t max_size, struct sockaddr_in *,socklen_t slen);
     int                 timed_recv(char *msg, size_t max_size, int max_wait_ms);
 
 private:

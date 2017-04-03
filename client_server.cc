@@ -180,7 +180,7 @@ udp_server::udp_server(const std::string& addr, int port)
     decimal_port[sizeof(decimal_port) / sizeof(decimal_port[0]) - 1] = '\0';
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
     hints.ai_protocol = IPPROTO_UDP;
     int r(getaddrinfo(addr.c_str(), decimal_port, &hints, &f_addrinfo));
@@ -188,7 +188,7 @@ udp_server::udp_server(const std::string& addr, int port)
     {
         throw udp_client_server_runtime_error(("invalid address or port for UDP socket: \"" + addr + ":" + decimal_port + "\"").c_str());
     }
-    f_socket = socket(f_addrinfo->ai_family, SOCK_DGRAM, IPPROTO_UDP);
+    f_socket = socket(f_addrinfo->ai_family, SOCK_DGRAM | SOCK_CLOEXEC, IPPROTO_UDP);
     if(f_socket == -1)
     {
         freeaddrinfo(f_addrinfo);
@@ -271,12 +271,13 @@ std::string udp_server::get_addr() const
 int udp_server::myrecvfrom(char *msg, size_t max_size, struct sockaddr_in *si_other, socklen_t *slen)
 {
     std::cout<<"In recvd from"<<std::endl;
-    return ::recvfrom(f_socket, msg, max_size, 0,(sockaddr*)si_other,slen);
+    return ::recvfrom(f_socket, msg, max_size, 0,(sockaddr*)si_other, slen);
 }
 
-size_t udp_server::mysendto(char *msg, size_t max_size, struct sockaddr_in* si_other,socklen_t slen)
+int udp_server::mysendto(char *msg, size_t max_size, struct sockaddr_in* si_other,socklen_t slen)
 {
-    return ::sendto(f_socket,msg,max_size,0,(sockaddr*)si_other, slen);
+    std::cout<<"sent to"<<max_size<<std::endl;
+    return ::sendto(f_socket, msg, max_size, 0,(sockaddr*)si_other, slen);
 }
 /** \brief Wait for data to come in.
  
