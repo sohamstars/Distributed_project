@@ -276,7 +276,7 @@ int udp_server::myrecvfrom(char *msg, size_t max_size, struct sockaddr_in *si_ot
 
 int udp_server::mysendto(char *msg, size_t max_size, struct sockaddr_in* si_other,socklen_t slen)
 {
-    std::cout<<"sent to"<<max_size<<std::endl;
+   // std::cout<<"sent to"<<max_size<<std::endl;
     return ::sendto(f_socket, msg, max_size, 0,(sockaddr*)si_other, slen);
 }
 /** \brief Wait for data to come in.

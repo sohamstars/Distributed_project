@@ -7,7 +7,7 @@
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <algorithm>
-
+#include <sys/time.h>
 
 #define BUFFLEN 4096
 using namespace udp_client_server;
@@ -59,57 +59,171 @@ char * changetodot(char * buffertochange)
 
 char * Lookup::extract_string_Lookup(char* buffer, int size)
 {
-	char * received_buffer_copy = new char[size];
+	char received_buffer_copy[size];
 	strcpy(received_buffer_copy, buffer);
 	bool flag_lookup = 0;
-	char *trav1_buff;
 	
+	struct timeval tv;
+	struct timeval tv1;
+	char *ip = new char[BUFFLEN];
+	char *domain_nam = new char[BUFFLEN];
+	struct timeval tv2;
+	struct timeval tv3;
+	int position_lkp = 0;
+	char *trav1_buff;
+	bool flag_1 = 0;
+	bool return_f;
+	char *command = new char[100];
+	char *get_line_from_file = new char[BUFFLEN];
+	std::string filename = "sd1.txt";
+	std::ifstream f2(filename.c_str());
+	memset(lookup_resp_buff,'\0',sizeof(lookup_resp_buff));
+
 	if(size != 0 && buffer != NULL)
 	{
+		//std::cout<<"received_buffer_copy"<<received_buffer_copy<<std::endl;
 		/* Seperating the URLs present in the request*/
-		for (char *trav_buff = strtok(received_buffer_copy, " "); trav_buff != NULL; trav_buff = strtok(NULL, " "))
+		for (trav1_buff = strtok(received_buffer_copy, " "); trav1_buff != NULL; trav1_buff = strtok(NULL, " "))
 		{
-			if(strcmp(trav_buff, "LOOKUP") && flag_lookup == 0)
+		//	std::cout<<"received_buffer_copy in loop"<<received_buffer_copy<<" "<<trav1_buff<<std::endl;
+			if(strcmp(trav1_buff, "LOOKUP") && flag_lookup == 0)
 				throw -1;		
-			else if(!strcmp(trav_buff, "LOOKUP"))
+			else if(!strcmp(trav1_buff, "LOOKUP"))
 			{
 				flag_lookup = 1;
 				continue;
 			}
-			trav1_buff = changetodot(trav_buff);
+		//	std::cout<<"Buffer to search "<<trav1_buff<<std::endl;
+		//	trav1_buff = changetodot(trav_buff);
 		//	std::cout<<"String received  "<<trav_buff<<std::endl;
 			if(m1.find(trav1_buff) != m1.end())
 			{
-				strcat(lookup_resp_buff, trav_buff);
+				strcat(lookup_resp_buff, trav1_buff);
 				strcat(lookup_resp_buff, " ");
+				gettimeofday (&tv, NULL);
+				
 				strcat(lookup_resp_buff, (m1.find(trav1_buff)->second).c_str());
+				gettimeofday (&tv1, NULL);
+			//	std::cout<<"time before lookup "<<tv.tv_sec<<"s "<<tv.tv_usec<<"us "<<std::endl;
+			//	std::cout<<"time after lookup "<<tv1.tv_sec<<"s "<<tv1.tv_usec<<"us "<<std::endl;
+		//		std::cout<<"Buffer found in hash. Time for lookup "<<(tv1.tv_sec - tv.tv_sec)<<"s "<<(tv1.tv_usec - tv.tv_usec)<<"us "<<std::endl;
 				strcat(lookup_resp_buff, "\n");
 			}
 			else
 			{
-				// check the secure copy of the global stream
+
+			//	std::cout<<"time to search in global stream"<<std::endl;
+				sprintf(command, "sh global_str.sh %s",trav1_buff);
+				system(command);
+				if(return_f = f2.is_open())
+				{
+					for(int j = 0; f2.getline(get_line_from_file,size,',') ;j++)
+					{
+						//	std::cout<<" Line: "<<get_line_from_file<<std::endl;
+
+							if(flag_1 == 0)
+							{
+								std::string trv_buf = get_line_from_file;
+								position_lkp = trv_buf.find("key");
+								if(position_lkp >= 0)
+								{
+									position_lkp = trv_buf.find(":");
+
+								//	std::cout<<"position of key "<<position<<std::endl;
+									int k = 0;
+									position_lkp = position_lkp + 3;
+									while(get_line_from_file[position_lkp] != '"')
+									{
+										//std::cout<<trav_buff[position]<<std::endl;
+										domain_nam[k] = get_line_from_file[position_lkp];
+										position_lkp++;
+										k++;
+									}
+									domain_nam[k] = '\0';
+							//		std::cout<<"domain name "<<domain_nam<<std::endl;
+								}
+								flag_1 = 1;
+							}
+							else if(flag_1 == 1)
+							{
+								std::string trv1_buf = get_line_from_file;
+								position_lkp = trv1_buf.find("data");
+								if(position_lkp >= 0)
+								{
+									position_lkp = trv1_buf.find(":");
+								//	std::cout<<"position of data "<<position<<std::endl;
+									int k = 0;
+									position_lkp = position_lkp + 3;
+									while(get_line_from_file[position_lkp] != '"')
+									{
+										ip[k] = get_line_from_file[position_lkp];
+										position_lkp++;
+										k++;
+									}
+									ip[k] = '\0';
+							//		std::cout<<"ip is "<<ip<<std::endl;
+								}
+								flag_1 = 0;
+							}
+
+						
+					
+				}		// get line
+				f2.close();
+			//	std::cout<<"no fault"<<std::endl;
+				std::string doman_nam = domain_nam;
+				std::string ip_nam = ip;
+				
+				m1[doman_nam] = ip_nam;
+			//	std::cout<<"fault"<<std::endl;
+				strcat(lookup_resp_buff, domain_nam);
+				strcat(lookup_resp_buff, " ");
+				gettimeofday (&tv, NULL);						
+				strcat(lookup_resp_buff, (m1.find(trav1_buff)->second).c_str());
+				gettimeofday (&tv1, NULL);
+			//	std::cout<<"time before lookup "<<tv.tv_sec<<"s "<<tv.tv_usec<<"us "<<std::endl;
+			//	std::cout<<"time after lookup "<<tv1.tv_sec<<"s "<<tv1.tv_usec<<"us "<<std::endl;
+			//	std::cout<<"Time for lookup "<<(tv1.tv_sec - tv.tv_sec)<<"s "<<(tv1.tv_usec - tv.tv_usec)<<"us "<<std::endl;
+			//	std::cout<<"Buffer added to hash "<<trav1_buff<<std::endl;
+				strcat(lookup_resp_buff, "\n");
+			//	std::cout<<"received_buffer_copy end loop"<<received_buffer_copy<<std::endl;
+				
+			} // end of f2
+			else
+			{
+				std::cout<<trav1_buff<<" "<<"Domain name missing in global stream"<<std::endl;
 			}
+		//	std::cout<<"end of global"<<std::endl;
+			}
+
 		}
+	
 		std::cout<<"Lookup result "<<lookup_resp_buff<<std::endl;
-		delete []received_buffer_copy;
+		//delete []received_buffer_copy;
 		return lookup_resp_buff;
 	}
-	delete []received_buffer_copy;
-	return NULL;
+	else
+	{
+		//delete []received_buffer_copy;
+		return NULL;
+	}
 }
+
 
 
 int Lookup::populate_map_from_stream(int size)
 {
-		/* Building the map out of the stream text File */
+	/* Building the map out of the stream text File */
 	std::string filename = "sd.txt";
 	std::ifstream f1(filename.c_str());
 	char *ip = new char[BUFFLEN];
 	char *domain_nam = new char[BUFFLEN];
-	
+	struct timeval tv2;
+	struct timeval tv3;
 	int position = 0;
 	bool flag = 0;
 	char *get_line_from_file = new char[BUFFLEN];
+	gettimeofday (&tv2, NULL);
 	system("sh multi_c.sh");
 	if(f1.is_open())
 	{
@@ -139,7 +253,7 @@ int Lookup::populate_map_from_stream(int size)
 							k++;
 						}
 						domain_nam[k] = '\0';
-						std::cout<<"domain name "<<domain_nam<<std::endl;
+				//		std::cout<<"domain name "<<domain_nam<<std::endl;
 					}
 					flag = 1;
 				}
@@ -160,7 +274,7 @@ int Lookup::populate_map_from_stream(int size)
 							k++;
 						}
 						ip[k] = '\0';
-						std::cout<<"ip is "<<ip<<std::endl;
+				//		std::cout<<"ip is "<<ip<<std::endl;
 					}
 					flag = 0;
 				}
@@ -170,8 +284,11 @@ int Lookup::populate_map_from_stream(int size)
 			std::string ip_nam = ip;
 			m1[doman_nam] = ip_nam;
 		}
+		gettimeofday (&tv3, NULL);
+		std::cout<<"Time for populating "<<(tv3.tv_sec - tv2.tv_sec)<<"s "<<(tv3.tv_usec - tv2.tv_usec)<<"us "<<std::endl;
 		delete []get_line_from_file;
-		std::cout<<"map ke ander "<<m1[std::string("wwwdotgoogledotcom")]<<std::endl;
+		f1.close();
+		//std::cout<<"map ke ander "<<m1[std::string("wwwdotgoogledotcom")]<<std::endl;
 		return 0;
 	}
 	else
@@ -196,7 +313,9 @@ char * send_dns_ip_for_join()
 			strcat(buffer1, buffer);
 			strcat(buffer1, " ");
 		}
+		f1.close();
 	}
+	
 	delete []buffer;
 	return buffer1;
 }
@@ -216,7 +335,7 @@ int main()
  	socklen_t slen = sizeof(si_other);
  	size_t length;
  	
-	udp_server *u1=new udp_server("10.0.0.188",10000);
+	udp_server *u1=new udp_server("10.201.21.218",10000);
 	Lookup *l1 = new Lookup();//"GUNS.txt");
 	l1->populate_map_from_stream(BUFFLEN);
 	while(1)
