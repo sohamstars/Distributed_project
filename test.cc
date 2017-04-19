@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <sys/time.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include "sha256.h"
+
 #define BUFFLEN 4096
 using namespace udp_client_server;
 
@@ -323,27 +326,42 @@ char * send_dns_ip_for_join()
 	return buffer1;
 }
 
-void send_dns_key_for_publish(char *domain_name, char *ip)
+void create_key(char *sha_input, char *sha_key)
+{
+	std::string temp=sha256(sha_input);
+	const char *temp_key=temp.c_str();
+	strcpy(sha_key,temp_key);
+	std::cout<<"In create key "<<sha_key<<std::endl;
+}
+
+void send_dns_key_for_publish(char *domain_name, char *ip, char *sha_key)
 {
 	char command[1024];
 	char exec_command[1024];
 	char exec_command_local[1024];
+	char exec_NULL_local[1024];
+	char exec_NULL_global[1024];
 	bool return_f;
-
+	char null_entry[]="00000000";
 	sprintf(command, "sh global_str.sh %s",domain_name);
         system(command);
 	 std::string filename = "sd1.txt";
+	
+	std::string filename_time = "time1.txt";
         std::ifstream f2(filename.c_str());
+	std::ifstream ftime(filename_time.c_str());
 	size_t position_lkp;
-char *get_line_from_file = new char[BUFFLEN];
-struct stat stat_buf;
-int rc = stat(filename.c_str(), &stat_buf);
+	char *get_line_from_file = new char[BUFFLEN];
+	struct stat stat_buf;
+	int rc = stat(filename.c_str(), &stat_buf);
+	char *time=NULL;
+	char sha_input[50];
 	if(stat_buf.st_size > 0)
          {
 
-				std::cout<<"String found, returning without adding"<<std::endl;
-				return;
-			}
+		std::cout<<"String found, returning without adding"<<std::endl;
+		return;
+	}
 		
 	std::cout<<"Publish"<<std::endl;
 	strcpy(exec_command,"multichain-cli chain1 publish globalstream ");
@@ -351,14 +369,40 @@ int rc = stat(filename.c_str(), &stat_buf);
 	
 	
 	strcat(exec_command,domain_name);
-	 strcat(exec_command_local,domain_name);
-	strcat(exec_command_local," ");
-	strcat(exec_command_local,ip);
 	strcat(exec_command," ");
+
+        strcat(exec_command_local,domain_name);
+	strcat(exec_command_local," ");
+	
+	strcpy(exec_NULL_global,exec_command);
+	strcpy(exec_NULL_local,exec_command_local);
+	
 	strcat(exec_command,ip);
-std::cout<<"EXEC "<< exec_command<<std::endl;	
+	strcat(exec_command_local,ip);
+	
+	strcat(exec_NULL_global,null_entry);
+	strcat(exec_NULL_local,null_entry);
+
+	system(exec_NULL_global);
+	system(exec_NULL_local);
 	system(exec_command);
 	system(exec_command_local);
+	
+	memset(command,0,1024);
+	sleep(20);   //Wait for block transaction to complete
+	
+	
+	sprintf(command, "sh get_time.sh %s",domain_name);
+        system(command);	
+	if(ftime.is_open())
+	{		
+		ftime.getline(get_line_from_file,BUFFLEN,',');
+		time=&get_line_from_file[12];	//get_line_from_file="blocktime":102737382
+		strcpy(sha_input,domain_name);
+		strcat(sha_input,time);
+		create_key(sha_input,sha_key);
+	}
+	
 }	
 int main()
 {
@@ -366,7 +410,7 @@ int main()
 	char buffer[BUFFLEN];
 	char buffer_to_send[BUFFLEN];
 	char *lookup_resp;
-	char *buff = NULL;
+	char *buff=NULL;
 	memset(buffer,'\0',BUFFLEN);
 	memset(buffer_to_send, '\0', BUFFLEN);
 	int n=0;
@@ -379,8 +423,10 @@ int main()
 	memset(domain_name,0,1024);
 	char new_ip[10];
 	memset(new_ip,0,10);
-	char *old_ip=NULL;
+	char old_ip[10];
+	memset(old_ip,0,10);
 	char *token=NULL;
+	char sha_key[300];
 	
 	udp_server *u1=new udp_server("172.31.3.44",10000);
 	Lookup *l1 = new Lookup();//"GUNS.txt");
@@ -414,16 +460,29 @@ int main()
 				token=strtok(NULL,":");
 				strcpy(new_ip,token);	
 				std::cout<<"Domain name"<<domain_name<<" Ip "<<new_ip<<std::endl;	
-				send_dns_key_for_publish(domain_name,new_ip);
+				send_dns_key_for_publish(domain_name,new_ip,sha_key);
+				buff=new char[BUFFLEN];
+				strcpy(buff, "SUCCESS ");
+				strcat(buff, sha_key);
+				std::cout<<"PUblish exits "<<buff <<std::endl;
 				
+			}
+			else if(!strcmp(token,"APPEND"))
+			{
+				std::cout<<"APPEND"<<std::endl;
+				token=strtok(NULL,":");
+                                strcpy(domain_name,token);
+                                token=strtok(NULL,":");
+                                strcpy(old_ip,token);
+				token=strtok(NULL,":");
+                                strcpy(new_ip,token);
+						
 			}	
-			buff=new char[100];
-			strcpy(buff,"key1234");
 			if(u1->mysendto(buff,BUFFLEN,&si_other,slen)<0)
 				perror("Error in send");
-			delete []buff;	
 				
 		}
+
 		
 		
 		//std::cout<<"Received from"<<inet_ntoa(si_other.sin_addr)<<":"<<ntohs(si_other.sin_port)<<std::endl;
@@ -433,7 +492,6 @@ int main()
 			//std::cout<<"buffer sent "<<buffer_to_send<<" length "<<strlen(buffer_to_send)<<std::endl;
 			if(u1->mysendto(buff,BUFFLEN,&si_other,slen)<0)
 				perror("Error in send");
-			delete []buff;
 		}
 		else
 		{
