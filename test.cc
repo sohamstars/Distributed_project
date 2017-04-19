@@ -8,7 +8,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <sys/time.h>
-
+#include <sys/stat.h>
 #define BUFFLEN 4096
 using namespace udp_client_server;
 
@@ -332,24 +332,18 @@ void send_dns_key_for_publish(char *domain_name, char *ip)
 
 	sprintf(command, "sh global_str.sh %s",domain_name);
         system(command);
-	 std::string filename = "sd.txt";
+	 std::string filename = "sd1.txt";
         std::ifstream f2(filename.c_str());
 	size_t position_lkp;
 char *get_line_from_file = new char[BUFFLEN];
-		
-	 if(return_f = f2.is_open())
+struct stat stat_buf;
+int rc = stat(filename.c_str(), &stat_buf);
+	if(stat_buf.st_size > 0)
          {
-		f2.getline(get_line_from_file,BUFFLEN,',');
 
-                       std::string trv_buf = get_line_from_file;
-                       position_lkp = trv_buf.find("key");
-                        if(position_lkp >= 0)
-			{
-				std::cout<<"Sstring found, returning without adding"<<std::endl;
-				f2.close();
+				std::cout<<"String found, returning without adding"<<std::endl;
 				return;
 			}
-	}
 		
 	std::cout<<"Publish"<<std::endl;
 	strcpy(exec_command,"multichain-cli chain1 publish globalstream ");
