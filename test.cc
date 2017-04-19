@@ -125,6 +125,8 @@ char * Lookup::extract_string_Lookup(char* buffer, int size)
 							{
 								std::string trv_buf = get_line_from_file;
 								position_lkp = trv_buf.find("key");
+								if(position_lkp == SIZE_MAX)
+									continue;
 								if(position_lkp >= 0)
 								{
 									position_lkp = trv_buf.find(":");
@@ -179,6 +181,7 @@ char * Lookup::extract_string_Lookup(char* buffer, int size)
 				strcat(lookup_resp_buff, domain_nam);
 				strcat(lookup_resp_buff, " ");
 				gettimeofday (&tv, NULL);						
+				if(m1.find(trav1_buff)!=m1.end())
 				strcat(lookup_resp_buff, (m1.find(trav1_buff)->second).c_str());
 				gettimeofday (&tv1, NULL);
 			//	std::cout<<"time before lookup "<<tv.tv_sec<<"s "<<tv.tv_usec<<"us "<<std::endl;
@@ -320,7 +323,49 @@ char * send_dns_ip_for_join()
 	return buffer1;
 }
 
+void send_dns_key_for_publish(char *domain_name, char *ip)
+{
+	char command[1024];
+	char exec_command[1024];
+	char exec_command_local[1024];
+	bool return_f;
 
+	sprintf(command, "sh global_str.sh %s",domain_name);
+        system(command);
+	 std::string filename = "sd.txt";
+        std::ifstream f2(filename.c_str());
+	size_t position_lkp;
+char *get_line_from_file = new char[BUFFLEN];
+		
+	 if(return_f = f2.is_open())
+         {
+		f2.getline(get_line_from_file,BUFFLEN,',');
+
+                       std::string trv_buf = get_line_from_file;
+                       position_lkp = trv_buf.find("key");
+                        if(position_lkp >= 0)
+			{
+				std::cout<<"Sstring found, returning without adding"<<std::endl;
+				f2.close();
+				return;
+			}
+	}
+		
+	std::cout<<"Publish"<<std::endl;
+	strcpy(exec_command,"multichain-cli chain1 publish globalstream ");
+	 strcpy(exec_command_local,"multichain-cli chain1 publish localstream ");
+	
+	
+	strcat(exec_command,domain_name);
+	 strcat(exec_command_local,domain_name);
+	strcat(exec_command_local," ");
+	strcat(exec_command_local,ip);
+	strcat(exec_command," ");
+	strcat(exec_command,ip);
+std::cout<<"EXEC "<< exec_command<<std::endl;	
+	system(exec_command);
+	system(exec_command_local);
+}	
 int main()
 {
 
@@ -334,7 +379,15 @@ int main()
  	struct sockaddr_in si_other;
  	socklen_t slen = sizeof(si_other);
  	size_t length;
- 	
+ 	char *COMMAND=NULL;
+	char *COMMAND_AMP=NULL;	//Add modify publish
+	char domain_name[1024];
+	memset(domain_name,0,1024);
+	char new_ip[10];
+	memset(new_ip,0,10);
+	char *old_ip=NULL;
+	char *token=NULL;
+	
 	udp_server *u1=new udp_server("172.31.3.44",10000);
 	Lookup *l1 = new Lookup();//"GUNS.txt");
 	l1->populate_map_from_stream(BUFFLEN);
@@ -343,9 +396,44 @@ int main()
 		u1->myrecvfrom(buffer,BUFFLEN,&si_other,&slen);
 		std::cout<<"Received "<<buffer<<std::endl;
 		// Join Message Response
-
+		
+		token=strtok(buffer,":");
+		
+		if(!strcmp(token,"JOIN"))
+		{
+			buff = send_dns_ip_for_join();
+                        //std::cout<<"buffer sent "<<buffer_to_send<<" length "<<strlen(buffer_to_send)<<std::endl;
+                        if(u1->mysendto(buff,BUFFLEN,&si_other,slen)<0)
+                                perror("Error in send");
+                        delete []buff;
+		}
+		else if(!strcmp(token,"PUBLISH"))
+		{
+			std::cout<<"In publish"<<token<<std::endl;
+			token=strtok(NULL,":");
+			std::cout<<"Token"<<token<<std::endl;
+			if(!strcmp(token,"ADD"))
+			{
+				std::cout<<"ADD"<<std::endl;
+				token=strtok(NULL,":");
+				strcpy(domain_name,token);
+				token=strtok(NULL,":");
+				strcpy(new_ip,token);	
+				std::cout<<"Domain name"<<domain_name<<" Ip "<<new_ip<<std::endl;	
+				send_dns_key_for_publish(domain_name,new_ip);
+				
+			}	
+			buff=new char[100];
+			strcpy(buff,"key1234");
+			if(u1->mysendto(buff,BUFFLEN,&si_other,slen)<0)
+				perror("Error in send");
+			delete []buff;	
+				
+		}
+		
+		
 		//std::cout<<"Received from"<<inet_ntoa(si_other.sin_addr)<<":"<<ntohs(si_other.sin_port)<<std::endl;
-		if(!strcmp(buffer,"JOIN"))
+		else if(!strcmp(buffer,"JOIN"))
 		{
 			buff = send_dns_ip_for_join();
 			//std::cout<<"buffer sent "<<buffer_to_send<<" length "<<strlen(buffer_to_send)<<std::endl;
