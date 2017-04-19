@@ -335,7 +335,7 @@ int main()
  	socklen_t slen = sizeof(si_other);
  	size_t length;
  	
-	udp_server *u1=new udp_server("10.201.21.218",10000);
+	udp_server *u1=new udp_server("172.31.3.44",10000);
 	Lookup *l1 = new Lookup();//"GUNS.txt");
 	l1->populate_map_from_stream(BUFFLEN);
 	while(1)
