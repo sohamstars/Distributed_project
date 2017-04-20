@@ -1,0 +1,102 @@
+[
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "en.wikipedia.org",
+        "data" : "00000000",
+        "confirmations" : 55,
+        "blocktime" : 1492629142,
+        "txid" : "df999bb5165aa64521edd1b2518a3df9c5d5e3828be6e71531169d2cfef36bb2"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "en.wikipedia.org",
+        "data" : "67892736",
+        "confirmations" : 55,
+        "blocktime" : 1492629142,
+        "txid" : "1cf7cfae4c7497033041ef497436e82bb9de2137e1f3ba2f82bfe4126986a094"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.slack.com",
+        "data" : "00000000",
+        "confirmations" : 44,
+        "blocktime" : 1492630700,
+        "txid" : "6f8f7e5b2a8eb0a6aafd3ceaaeefc042759313f2c6d8bffe3c639a78eccb6faf"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.slack.com",
+        "data" : "87676545",
+        "confirmations" : 44,
+        "blocktime" : 1492630700,
+        "txid" : "d511b578179aa6c363a1024451d9dc13c72365f9f1ad11e1fdcbeb53e9217e6b"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.bbc.co.uk",
+        "data" : "00000000",
+        "confirmations" : 33,
+        "blocktime" : 1492631565,
+        "txid" : "8927824c3e9cf3f45c7916422f77393ed5205c5ac5b32850549beb7d2332158c"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.bbc.co.uk",
+        "data" : "62728373",
+        "confirmations" : 33,
+        "blocktime" : 1492631565,
+        "txid" : "d0028818ed172062320f2886b9548dbc52e4b30159b5339da3b420f9e47f8787"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.leetcode.com",
+        "data" : "00000000",
+        "confirmations" : 22,
+        "blocktime" : 1492631740,
+        "txid" : "4583c825620f1497cd3c7b97039d0aa62e170dede94efae2aed43979d3a24f50"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.leetcode.com",
+        "data" : "27368498",
+        "confirmations" : 22,
+        "blocktime" : 1492631740,
+        "txid" : "cdde8063a3e2cce3c6635c73a20857f4ae44471bda0ce93a49016374f43c63b9"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.foxnew.com",
+        "data" : "00000000",
+        "confirmations" : 11,
+        "blocktime" : 1492632073,
+        "txid" : "a056af02c561e04cb383d322de10f4b8487ac815b95a1e397388246e548901fd"
+    },
+    {
+        "publishers" : [
+            "14Nz1CEq5Mrar6czNvXKZnQebswwkHDbzXB7ht"
+        ],
+        "key" : "www.foxnew.com",
+        "data" : "76785645",
+        "confirmations" : 11,
+        "blocktime" : 1492632073,
+        "txid" : "220761e26f23d96c276c6baf3c01134fca045468da424503870edbc54b5d9b03"
+    }
+]
