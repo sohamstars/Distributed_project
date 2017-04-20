@@ -19,6 +19,7 @@ using namespace udp_client_server;
 #define NUM_ENTRIES 9
 #define NUM_DNS_QUERIES	4
 #define RECV_TIMEOUT_MS	1500
+#define PUBLISH_RECV_TIMEOUT_MS	60000
 #define NUM_SERVERS 6
 
 
@@ -188,35 +189,82 @@ int main(int argc,char *argv[])
 	}
 	else if(strcmp(argv[1],"publish")==0)
 	{
-		while(1)
+		if(strcmp(argv[2],"add")==0)
 		{
-			bzero(serverIP, sizeof(serverIP));
-			bzero(PortNum, sizeof(PortNum));
-			bzero(buf, sizeof(buf));
-			client = getServerIP(serverIP, PortNum);
-			fflush(stdout);
-			sprintf(buf,"PUBLISH:ADD:%s:%s:",argv[2],argv[3]);
-			// strcpy(buf,"PUBLISH:");
-			// strcat(buf,argv[2]);
-			// strcat(buf,argv[3]);
-			client->send(buf, (strlen(buf)));
-			bzero(buf, sizeof(buf));
-			if((res = (client->timed_recv(buf, MAXBUFSIZE, RECV_TIMEOUT_MS))) < 0)
+			while(1)
 			{
-				printf("\r\nFailed Server");
-				delete client;
+				bzero(serverIP, sizeof(serverIP));
+				bzero(PortNum, sizeof(PortNum));
+				bzero(buf, sizeof(buf));
+				client = getServerIP(serverIP, PortNum);
+				fflush(stdout);
+				sprintf(buf,"PUBLISH:ADD:%s:%s:",argv[3],argv[4]);
+				printf("sending buf %s\n", buf);
+				client->send(buf, (strlen(buf)));
+				bzero(buf, sizeof(buf));
+				if((res = (client->timed_recv(buf, MAXBUFSIZE, PUBLISH_RECV_TIMEOUT_MS))) < 0)
+				{
+					printf("\r\nFailed Server");
+					delete client;
+				}
+				else
+				{
+					printf("\r\nFound Server");
+					done = 1;
+					printf("\r\nResult:%s\n\n",buf);
+					sscanf(buf,"SUCCESS %s",buf);
+					if(strcmp(buf,"DUPLICATE")==0)
+					{
+						printf("Duplicate Domain!!!\n\nBYEBYE!!!!\n");
+						break;
+					}
+					FILE *fp;
+					fp = fopen(UserKeyFile,"w");
+					printf("\nbytes written is %d\n",(int)fwrite(buf,1,strlen(buf),fp));
+					fclose(fp);
+					break;
+				}		
 			}
-			else
+		}
+		else if(strcmp(argv[2],"append")==0)
+		{
+			while(1)
 			{
-				printf("\r\nFound Server");
-				done = 1;
-				printf("\r\nResult:%s\n\n",buf);
+				bzero(serverIP, sizeof(serverIP));
+				bzero(PortNum, sizeof(PortNum));
+				bzero(buf, sizeof(buf));
+				client = getServerIP(serverIP, PortNum);
+				fflush(stdout);
+				char key[100]="";
 				FILE *fp;
-				fp = fopen(UserKeyFile,"w+");
-				fwrite(buf,1,strlen(buf),fp);
-				fclose(fp);
-				break;
-			}		
+				fp = fopen(UserKeyFile,"r");
+				fread(key,1,100,fp);
+				sprintf(buf,"PUBLISH:APPEND:%s:%s:%s:",argv[3],argv[4],key);
+				client->send(buf, (strlen(buf)));
+				bzero(buf, sizeof(buf));
+				if((res = (client->timed_recv(buf, MAXBUFSIZE, PUBLISH_RECV_TIMEOUT_MS))) < 0)
+				{
+					printf("\r\nFailed Server");
+					delete client;
+				}
+				else
+				{
+					printf("\r\nFound Server");
+					done = 1;
+					printf("\r\nResult:%s\n\n",buf);
+					sscanf(buf,"SUCCESS %s",buf);
+					if(strcmp(buf,"BAD")==0)
+					{
+						printf("Bad Domain!!!\n\nBYEBYE!!!!\n");
+						break;
+					}
+					FILE *fp;
+					fp = fopen(UserKeyFile,"w");
+					fwrite(buf,1,strlen(buf),fp);
+					fclose(fp);
+					break;
+				}		
+			}
 		}
 	}
 	return 0;
