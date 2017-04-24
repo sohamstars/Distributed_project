@@ -46,7 +46,7 @@ int main(int argc,char *argv[])
 			bzero(buf, sizeof(buf));
 			client = getServerIP(serverIP, PortNum);
 			fflush(stdout);
-			strcpy(buf,"JOIN");
+			// strcpy(buf,"PUBLISH:www.nba.com:98765432:");
 			client->send(buf, (strlen(buf)));
 			bzero(buf, sizeof(buf));
 			if((res = (client->timed_recv(buf, MAXBUFSIZE, RECV_TIMEOUT_MS))) < 0)
@@ -92,6 +92,11 @@ int main(int argc,char *argv[])
 		struct timeval t1,t2;
 		while(1)
 		{
+			// if(argc<2)
+			// {
+			// 	printf("Usage main <url>\n");
+			// 	exit(1);
+			// }
 			bzero(serverIP, sizeof(serverIP));
 			bzero(PortNum, sizeof(PortNum));
 			udp_client *client = getServerIP(serverIP, PortNum);
@@ -121,7 +126,11 @@ int main(int argc,char *argv[])
 			strcat(buf,url);
 			strcat(buf," ");
 			createlist(buf+strlen(buf));
+			// strcpy(buf,"LOOKUP www.google.com www.cmu.edu www.restaurants.com www.colorado.edu www.yahoo.com");
 			printf("\r\nLIST: %s", buf);
+			// int i = 0;
+			// for(;i<5;i++)
+			// 	system("time -p dig +short www.yahoo.com");
 			gettimeofday(&t1,NULL);
 			client->send(buf, (strlen(buf)));
 			bzero(buf, sizeof(buf));
@@ -213,7 +222,9 @@ int main(int argc,char *argv[])
 					}
 					FILE *fp;
 					fp = fopen(UserKeyFile,"w");
+					// sprintf(temp,"%s %s %s\n", argv[3], argv[4], buf); 
 					int nbytes = (int)fwrite(buf,1,strlen(buf),fp);
+					// printf("\nbytes written is %d\n",nbytes);
 					fclose(fp);
 					break;
 				}		
@@ -229,10 +240,39 @@ int main(int argc,char *argv[])
 				client = getServerIP(serverIP, PortNum);
 				fflush(stdout);
 				char key[100]="";
+				// char url[100]="";
+				// char ip[20]="";
 				FILE *fp;
 				fp = fopen(UserKeyFile,"r");
 				fread(key,1,100,fp);
+				// while(!feof(fp))
+				// {
+				// 	fread(buf,1,MAXBUFSIZE,fp);
+				// 	while(1)
+				// 	{
+				// 		char temp[MAXBUFSIZE]="";
+				// 		strcpy(temp, buf);
+				// 		sscanf(buf,"%s %s %[^\n]\n%[^EOF]",url, ip, key, buf);
+				// 		printf("url is %s\n", url);
+				// 		printf("ip is %s\n", ip);
+				// 		printf("key is %s\n", key);
+				// 		printf("\nbuf is %s\n", buf);
+				// 		printf("\ntemp is %s\n", temp);
+				// 		if(strcmp(url,argv[3])==0)
+				// 		{
+				// 			// if(strcmp(ip,argv[4])==0)
+				// 			break;
+				// 		}
+				// 		else if(strcmp(temp,buf)==0)
+				// 		{
+				// 			printf("IP not found in UserKey List\n");
+				// 			exit(1);
+				// 		}
+				// 	}
+				// }
 				fclose(fp);
+				// fread(key,1,150,fp);
+				// sscanf(key,"%s %s %s",key, key, key);
 				sprintf(buf,"PUBLISH:APPEND:%s:%s:%s:",argv[3],argv[4],key);
 				printf("buf is %s\n", buf);
 				client->send(buf, (strlen(buf)));
@@ -255,7 +295,10 @@ int main(int argc,char *argv[])
 					}
 					FILE *fp;
 					fp = fopen(UserKeyFile,"w");
+					// char temp[150]="";
+					// sprintf(temp,"%s %s %s", argv[3], argv[4],buf);
 					int nbytes = (int)fwrite(buf,1,strlen(buf),fp);
+					// printf("\nbytes written is %d\n",nbytes);
 					fclose(fp);
 					break;
 				}		
@@ -275,6 +318,32 @@ int main(int argc,char *argv[])
 				FILE *fp;
 				fp = fopen(UserKeyFile,"r");
 				fread(key,1,100,fp);
+				// while(!feof(fp))
+				// {
+				// 	fread(buf,1,MAXBUFSIZE,fp);
+				// 	while(1)
+				// 	{
+				// 		char temp[MAXBUFSIZE]="";
+				// 		strcpy(temp, buf);
+				// 		sscanf(buf,"%s %s %[^\n]\n%[^EOF]",url, ip, key, buf);
+				// 		// printf("url is %s\n", url);
+				// 		// printf("ip is %s\n", ip);
+				// 		// printf("key is %s\n", key);
+				// 		// printf("\nbuf is %s\n", buf);
+				// 		// printf("\ntemp is %s\n", temp);
+				// 		if(strcmp(url,argv[3])==0)
+				// 		{
+				// 			if(strcmp(ip,argv[4])==0)
+				// 				break;
+				// 		}
+				// 		else if(strcmp(temp,buf)==0)
+				// 		{
+				// 			printf("IP not found in UserKey List\n");
+				// 			exit(1);
+				// 		}
+				// 	}
+				// }
+				// fseek ( fp , -(MAXBUFSIZE) , SEEK_CUR );
 				fclose(fp);
 				bzero(buf, sizeof(buf));
 				sprintf(buf,"PUBLISH:MODIFY:%s:%s:%s:%s:", argv[3], argv[4], argv[5], key);
@@ -298,6 +367,37 @@ int main(int argc,char *argv[])
 						break;
 					}
 					fp = fopen(UserKeyFile,"w");
+					// char temp[150]="";
+					// sprintf(temp,"%s %s %s\n", argv[3], argv[5], buf);
+					// bzero(buf, sizeof(buf));
+					// fread(buf,1,MAXBUFSIZE,fp);
+					// fseek ( fp , -(MAXBUFSIZE) , SEEK_CUR );
+					// char tmp[MAXBUFSIZE]="";
+					// strcpy(tmp,buf);
+					// char *t = tmp;
+					// while(1)
+					// {
+					// 	sscanf(tmp,"%s %s %s\n%[^,]", url, ip, key, tmp);
+					// 	if(strcmp(argv[3],url)==0)
+					// 	{
+					// 		if(strcmp(ip,argv[4])==0)
+					// 		{
+					// 			break;
+					// 		}
+					// 	}
+					// }
+					// int i = 0;
+					// int lenSize = strlen(url);
+					// lenSize++;
+					// lenSize+= strlen(ip);
+					// lenSize++;
+					// lenSize+= strlen(key);
+					// lenSize++;
+					// t = buf + (tmp - t - lenSize);
+					// for(i=0;i<strlen(temp);i++)
+					// {
+					// 	t[i] = temp[i];
+					// }
 					int nbytes = (int)fwrite(buf,1,strlen(buf),fp);
 					printf("\nbytes written is %d\n",nbytes);
 					fclose(fp);
