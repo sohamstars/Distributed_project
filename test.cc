@@ -16,49 +16,39 @@
 #define BUFFLEN 4096
 using namespace udp_client_server;
 
+class mapentry      
+{
+    public:
+        std::vector<std::string> ip_name_dns;     // ip address
+        int count;                                  // counter
+        mapentry(int c, std::string& str):count(c){
+            ip_name_dns.push_back(str);
+        }
+};
+
+
 class Lookup
 {
 	public:
 		Lookup();//std::string filename);
 		char *extract_string_Lookup(char *buffer, int size);
 		int populate_map_from_stream(int size);
-
+		void send_dns_key_for_publish(char *domain_name, char *new_ip, char *sha_key);
+		void create_key(char *sha_input, char *sha_key);
+		void send_dns_key_for_append(char *domain_name,char *new_ip, char *am_sha_key, char *sha_key);
+		void send_dns_key_for_modify(char *domain_name,char *old_ip,char *new_ip,char *am_sha_key,char *sha_key);
 	private:
-		std::map<std::string,std::string> m1;
-//		std::string filename;
-		char *lookup_resp_buff;
-
+	 static std::map<std::string, mapentry*> m1;
+//     	 std::string filename;
+        	char *lookup_resp_buff;
 };
+
+std::map<std::string, mapentry*> Lookup::m1;
 
 Lookup::Lookup()//std::string filename)
 {
 //	this->filename = filename;
 	this->lookup_resp_buff = new char[BUFFLEN];
-}
-
-
-char * changetodot(char * buffertochange)
-{
-	int k = 0;
-	char * newbuff = new char[BUFFLEN];
-	bzero(newbuff,BUFFLEN);
-	for(int i = 0 ; i < strlen(buffertochange);i++)
-	{
-		newbuff[k] = buffertochange[i];
-	//	std::cout<<newbuff<<std::endl;
-		k++;
-		if(buffertochange[i + 1] == '.')
-		{
-			strcat(newbuff, "dot");
-		//	std::cout<<newbuff<<std::endl;
-			k=k+3;
-			i++;
-		}
-		
-	}
-	newbuff[k] = '\0';
-	//std::cout<<"return string: "<<newbuff<<std::endl;
-	return newbuff;
 }
 
 char * Lookup::extract_string_Lookup(char* buffer, int size)
@@ -79,8 +69,16 @@ char * Lookup::extract_string_Lookup(char* buffer, int size)
 	bool return_f;
 	char *command = new char[100];
 	char *get_line_from_file = new char[BUFFLEN];
+	struct stat stat_buf;
+	
 	std::string filename = "sd1.txt";
 	std::ifstream f2(filename.c_str());
+	
+	static int lookup_flag_hash = 0;
+	int min_count = 65535;
+	int count_ip = 0;
+	std::string key_min_count;
+
 	memset(lookup_resp_buff,'\0',sizeof(lookup_resp_buff));
 
 	if(size != 0 && buffer != NULL)
@@ -105,8 +103,20 @@ char * Lookup::extract_string_Lookup(char* buffer, int size)
 				strcat(lookup_resp_buff, trav1_buff);
 				strcat(lookup_resp_buff, " ");
 				gettimeofday (&tv, NULL);
+				mapentry *me5 = m1.find(trav1_buff)->second;
+				me5->count = me5->count + 1;
 				
-				strcat(lookup_resp_buff, (m1.find(trav1_buff)->second).c_str());
+				if(lookup_flag_hash < me5->ip_name_dns.size())
+				{
+					strcat(lookup_resp_buff, (me5->ip_name_dns[lookup_flag_hash]).c_str());
+					lookup_flag_hash++;
+				}
+				else
+				{
+					lookup_flag_hash = 0;
+					strcat(lookup_resp_buff, (me5->ip_name_dns[0]).c_str());
+				}
+	
 				gettimeofday (&tv1, NULL);
 			//	std::cout<<"time before lookup "<<tv.tv_sec<<"s "<<tv.tv_usec<<"us "<<std::endl;
 			//	std::cout<<"time after lookup "<<tv1.tv_sec<<"s "<<tv1.tv_usec<<"us "<<std::endl;
@@ -117,8 +127,27 @@ char * Lookup::extract_string_Lookup(char* buffer, int size)
 			{
 
 			//	std::cout<<"time to search in global stream"<<std::endl;
-				sprintf(command, "sh global_str.sh %s",trav1_buff);
+				std::map<std::string, mapentry*>::iterator it = m1.begin();
+				sprintf(command, "sh global_str.sh localstream %s",trav1_buff);
 				system(command);
+
+				int rc = stat(filename.c_str(), &stat_buf);
+							
+				
+				if(stat_buf.st_size <= 0)
+         		{
+         			sprintf(command, "sh global_str.sh globalstream %s",trav1_buff);
+					system(command);
+
+					rc = stat(filename.c_str(), &stat_buf);
+					if(stat_buf.st_size <= 0)
+         			{
+         				std::cout<<"String not found in local or global stream"<<std::endl;
+         				return NULL;
+         			}
+					
+				}
+
 				if(return_f = f2.is_open())
 				{
 					for(int j = 0; f2.getline(get_line_from_file,size,',') ;j++)
@@ -179,14 +208,40 @@ char * Lookup::extract_string_Lookup(char* buffer, int size)
 			//	std::cout<<"no fault"<<std::endl;
 				std::string doman_nam = domain_nam;
 				std::string ip_nam = ip;
+				mapentry *me1 = new mapentry(1,ip_nam);
+					if(m1.size() < 65535)
+					{	
+						m1[doman_nam] = me1;
+					}
+					else
+					{
+						
+						while(it != m1.end())
+						{
+							mapentry *me2 = it->second;
+							count_ip = me2->count;	
+							if(count_ip < min_count)
+							{
+								min_count = count_ip;
+								key_min_count = it->first;
+							}
+							it++;
+						}
+						m1.erase(key_min_count);
+						m1[doman_nam] = me1;
+
+					}
 				
-				m1[doman_nam] = ip_nam;
 			//	std::cout<<"fault"<<std::endl;
 				strcat(lookup_resp_buff, domain_nam);
 				strcat(lookup_resp_buff, " ");
 				gettimeofday (&tv, NULL);						
 				if(m1.find(trav1_buff)!=m1.end())
-				strcat(lookup_resp_buff, (m1.find(trav1_buff)->second).c_str());
+				{
+					std::vector<std::string> v=(m1.find(trav1_buff)->second)->ip_name_dns;
+					strcat(lookup_resp_buff,v[0].c_str());
+			
+				}
 				gettimeofday (&tv1, NULL);
 			//	std::cout<<"time before lookup "<<tv.tv_sec<<"s "<<tv.tv_usec<<"us "<<std::endl;
 			//	std::cout<<"time after lookup "<<tv1.tv_sec<<"s "<<tv1.tv_usec<<"us "<<std::endl;
@@ -289,7 +344,8 @@ int Lookup::populate_map_from_stream(int size)
 			}
 			std::string doman_nam = domain_nam;
 			std::string ip_nam = ip;
-			m1[doman_nam] = ip_nam;
+			mapentry *m7=new mapentry(1,ip_nam);
+			m1[doman_nam] = m7;
 		}
 		gettimeofday (&tv3, NULL);
 		std::cout<<"Time for populating "<<(tv3.tv_sec - tv2.tv_sec)<<"s "<<(tv3.tv_usec - tv2.tv_usec)<<"us "<<std::endl;
@@ -327,7 +383,7 @@ char * send_dns_ip_for_join()
 	return buffer1;
 }
 
-void create_key(char *sha_input, char *sha_key)
+void Lookup::create_key(char *sha_input, char *sha_key)
 {
 	std::string temp=sha256(sha_input);
 	const char *temp_key=temp.c_str();
@@ -335,7 +391,7 @@ void create_key(char *sha_input, char *sha_key)
 	std::cout<<"In create key "<<sha_key<<std::endl;
 }
 
-void send_dns_key_for_publish(char *domain_name, char *new_ip, char *sha_key)
+void Lookup:: send_dns_key_for_publish(char *domain_name, char *new_ip, char *sha_key)
 {
 	char command[1024];
 	char exec_command[1024];
@@ -407,7 +463,7 @@ void send_dns_key_for_publish(char *domain_name, char *new_ip, char *sha_key)
 	
 }	
 
-void send_dns_key_for_append(char *domain_name,char *new_ip, char *am_sha_key, char *sha_key)
+void Lookup::send_dns_key_for_append(char *domain_name,char *new_ip, char *am_sha_key, char *sha_key)
 {
 	char command[1024];
         char exec_command[1024];
@@ -479,7 +535,9 @@ void send_dns_key_for_append(char *domain_name,char *new_ip, char *am_sha_key, c
                         create_key(sha_input,sha_key);
                  
                 }
-
+		mapentry *me6 = m1[domain_name];
+		if(me6!=NULL)
+		me6 -> ip_name_dns.push_back(new_ip);
 
         }
 	else
@@ -491,7 +549,7 @@ void send_dns_key_for_append(char *domain_name,char *new_ip, char *am_sha_key, c
 
 }
 
-void send_dns_key_for_modify(char *domain_name,char *old_ip,char *new_ip,char *am_sha_key,char *sha_key)
+void Lookup::send_dns_key_for_modify(char *domain_name,char *old_ip,char *new_ip,char *am_sha_key,char *sha_key)
 {
 	char command[1024];
         char exec_command[1024];
@@ -549,7 +607,6 @@ void send_dns_key_for_modify(char *domain_name,char *old_ip,char *new_ip,char *a
                 strcpy(sha_key,"BAD DOMAIN");
                 return;
         }
-sleep(5);	
 	 if(fmod.is_open())
          {       
                                         memset(get_line_from_file,0,BUFFLEN);
@@ -609,10 +666,25 @@ sleep(5);
                         create_key(sha_input,sha_key);
 
                 }
-
+	
+		if(m1[domain_name]!=NULL)
+		{
+			mapentry *me1 = m1.find(domain_name)->second;
+			std::vector<std::string> v=me1->ip_name_dns;
+			for(std::vector<std::string>::iterator it =v.begin(); it != v.end(); ++it) 
+			{
+    				if(!(strcmp((*it).c_str(), old_ip)))
+    				{
+    					*it = new_ip;
+    					break;
+    				}
+			}
+		}	
 
 
 }
+
+
 int main()
 {
 
@@ -675,7 +747,7 @@ int main()
 				token=strtok(NULL,":");
 				strcpy(new_ip,token);	
 				std::cout<<"Domain name"<<domain_name<<" Ip "<<new_ip<<std::endl;	
-				send_dns_key_for_publish(domain_name,new_ip,sha_key);
+				l1->send_dns_key_for_publish(domain_name,new_ip,sha_key);
 				buff=new char[BUFFLEN];
 				strcpy(buff, "SUCCESS ");
 				strcat(buff, sha_key);
@@ -692,7 +764,7 @@ int main()
 				token=strtok(NULL,":");
 				strcpy(am_sha_key,token);
 				
-				send_dns_key_for_append(domain_name,new_ip,am_sha_key,sha_key);
+				l1->send_dns_key_for_append(domain_name,new_ip,am_sha_key,sha_key);
 				buff=new char[BUFFLEN];
                                 strcpy(buff, "SUCCESS ");
                                 strcat(buff, sha_key);
@@ -711,7 +783,7 @@ int main()
 				token=strtok(NULL,":");
                                 strcpy(am_sha_key,token);
 				
-				send_dns_key_for_modify(domain_name,old_ip,new_ip,am_sha_key,sha_key);
+				l1->send_dns_key_for_modify(domain_name,old_ip,new_ip,am_sha_key,sha_key);
 			 	buff=new char[BUFFLEN];
                                 strcpy(buff, "SUCCESS ");
                                 strcat(buff, sha_key);
