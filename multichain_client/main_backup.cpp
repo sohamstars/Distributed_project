@@ -14,7 +14,7 @@ using namespace udp_client_server;
 
 #define DNS_Servers "DNS.txt"
 #define Search_Entries "DNS_Responses.txt"
-// #define UserKeyFile "UserKey.txt"
+#define UserKeyFile "UserKey.txt"
 #define MAXBUFSIZE 4096
 #define NUM_ENTRIES 9
 #define NUM_DNS_QUERIES	4
@@ -46,7 +46,7 @@ int main(int argc,char *argv[])
 			bzero(buf, sizeof(buf));
 			client = getServerIP(serverIP, PortNum);
 			fflush(stdout);
-			strcpy(buf,"JOIN");
+			strcpy(buf,"PUBLISH:www.nba.com:98765432:");
 			client->send(buf, (strlen(buf)));
 			bzero(buf, sizeof(buf));
 			if((res = (client->timed_recv(buf, MAXBUFSIZE, RECV_TIMEOUT_MS))) < 0)
@@ -92,6 +92,11 @@ int main(int argc,char *argv[])
 		struct timeval t1,t2;
 		while(1)
 		{
+			// if(argc<2)
+			// {
+			// 	printf("Usage main <url>\n");
+			// 	exit(1);
+			// }
 			bzero(serverIP, sizeof(serverIP));
 			bzero(PortNum, sizeof(PortNum));
 			udp_client *client = getServerIP(serverIP, PortNum);
@@ -121,7 +126,11 @@ int main(int argc,char *argv[])
 			strcat(buf,url);
 			strcat(buf," ");
 			createlist(buf+strlen(buf));
+			// strcpy(buf,"LOOKUP www.google.com www.cmu.edu www.restaurants.com www.colorado.edu www.yahoo.com");
 			printf("\r\nLIST: %s", buf);
+			// int i = 0;
+			// for(;i<5;i++)
+			// 	system("time -p dig +short www.yahoo.com");
 			gettimeofday(&t1,NULL);
 			client->send(buf, (strlen(buf)));
 			bzero(buf, sizeof(buf));
@@ -180,8 +189,6 @@ int main(int argc,char *argv[])
 	}
 	else if(strcmp(argv[1],"publish")==0)
 	{
-		char UserKeyFile[100] = "";
-		sprintf(UserKeyFile,"%s.txt",argv[3]);
 		if(strcmp(argv[2],"add")==0)
 		{
 			while(1)
@@ -213,7 +220,10 @@ int main(int argc,char *argv[])
 					}
 					FILE *fp;
 					fp = fopen(UserKeyFile,"w");
-					int nbytes = (int)fwrite(buf,1,strlen(buf),fp);
+					char temp[150]="";
+					sprintf(temp,"%s %s %s", argv[3], argv[4], buf); 
+					int nbytes = (int)fwrite(temp,1,strlen(temp),fp);
+					// printf("\nbytes written is %d\n",nbytes);
 					fclose(fp);
 					break;
 				}		
@@ -231,10 +241,9 @@ int main(int argc,char *argv[])
 				char key[100]="";
 				FILE *fp;
 				fp = fopen(UserKeyFile,"r");
-				fread(key,1,100,fp);
-				fclose(fp);
+				fread(key,1,150,fp);
+				sscanf(key,"%s %s %s",key, key, key);
 				sprintf(buf,"PUBLISH:APPEND:%s:%s:%s:",argv[3],argv[4],key);
-				printf("buf is %s\n", buf);
 				client->send(buf, (strlen(buf)));
 				bzero(buf, sizeof(buf));
 				if((res = (client->timed_recv(buf, MAXBUFSIZE, PUBLISH_RECV_TIMEOUT_MS))) < 0)
@@ -255,58 +264,63 @@ int main(int argc,char *argv[])
 					}
 					FILE *fp;
 					fp = fopen(UserKeyFile,"w");
-					int nbytes = (int)fwrite(buf,1,strlen(buf),fp);
-					fclose(fp);
-					break;
-				}		
-			}
-		}
-		else if(strcmp(argv[2],"modify")==0)
-		{
-			while(1)
-			{
-				bzero(serverIP, sizeof(serverIP));
-				bzero(PortNum, sizeof(PortNum));
-				bzero(buf, sizeof(buf));
-				client = getServerIP(serverIP, PortNum);
-				fflush(stdout);
-				char key[100]="";
-				int foundKey = 0;
-				FILE *fp;
-				fp = fopen(UserKeyFile,"r");
-				fread(key,1,100,fp);
-				fclose(fp);
-				bzero(buf, sizeof(buf));
-				sprintf(buf,"PUBLISH:MODIFY:%s:%s:%s:%s:", argv[3], argv[4], argv[5], key);
-				printf("buf is %s\n", buf);
-				client->send(buf, (strlen(buf)));
-				bzero(buf, sizeof(buf));
-				if((res = (client->timed_recv(buf, MAXBUFSIZE, PUBLISH_RECV_TIMEOUT_MS))) < 0)
-				{
-					printf("\r\nFailed Server");
-					delete client;
-				}
-				else
-				{
-					printf("\r\nFound Server");
-					done = 1;
-					printf("\r\nResult:%s\n\n",buf);
-					sscanf(buf,"SUCCESS %s",buf);
-					if(strcmp(buf,"BAD")==0)
-					{
-						printf("Bad Domain!!!\n\nBYEBYE!!!!\n");
-						break;
-					}
-					fp = fopen(UserKeyFile,"w");
-					int nbytes = (int)fwrite(buf,1,strlen(buf),fp);
-					printf("\nbytes written is %d\n",nbytes);
+					char temp[150]="";
+					sprintf(temp,"%s %s %s", argv[3], argv[4],buf);
+					int nbytes = (int)fwrite(temp,1,strlen(temp),fp);
+					// printf("\nbytes written is %d\n",nbytes);
 					fclose(fp);
 					break;
 				}		
 			}
 		}
 	}
-	
+	else if(strcmp(argv[1],"modify")==0)
+	{
+		while(1)
+		{
+			bzero(serverIP, sizeof(serverIP));
+			bzero(PortNum, sizeof(PortNum));
+			bzero(buf, sizeof(buf));
+			client = getServerIP(serverIP, PortNum);
+			fflush(stdout);
+			char key[100]="";
+			char url[100]="";
+			char ip[20]="";
+			FILE *fp;
+			fp = fopen(UserKeyFile,"r");
+			fread(key,1,150,fp);
+			sscanf(key,"%s %s %s",url, ip, key);
+			sprintf(buf,"MODIFY:%s:%s:%s:%s:", argv[2], ip, argv[3], key);
+			printf("buf is %s\n", buf);
+			client->send(buf, (strlen(buf)));
+			bzero(buf, sizeof(buf));
+			if((res = (client->timed_recv(buf, MAXBUFSIZE, PUBLISH_RECV_TIMEOUT_MS))) < 0)
+			{
+				printf("\r\nFailed Server");
+				delete client;
+			}
+			else
+			{
+				printf("\r\nFound Server");
+				done = 1;
+				printf("\r\nResult:%s\n\n",buf);
+				sscanf(buf,"SUCCESS %s",buf);
+				if(strcmp(buf,"BAD")==0)
+				{
+					printf("Bad Domain!!!\n\nBYEBYE!!!!\n");
+					break;
+				}
+				FILE *fp;
+				fp = fopen(UserKeyFile,"w");
+				char temp[150]="";
+				sprintf(temp,"%s %s %s", argv[3], argv[4], buf);
+				int nbytes = (int)fwrite(temp,1,strlen(temp),fp);
+				// printf("\nbytes written is %d\n",nbytes);
+				fclose(fp);
+				break;
+			}		
+		}
+	}
 	return 0;
 }
 
