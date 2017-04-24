@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <map>
+#include <vector>
 #include <arpa/inet.h>
 #include <cstdlib>
 #include <algorithm>
@@ -334,7 +335,7 @@ void create_key(char *sha_input, char *sha_key)
 	std::cout<<"In create key "<<sha_key<<std::endl;
 }
 
-void send_dns_key_for_publish(char *domain_name, char *ip, char *sha_key)
+void send_dns_key_for_publish(char *domain_name, char *new_ip, char *sha_key)
 {
 	char command[1024];
 	char exec_command[1024];
@@ -351,15 +352,16 @@ void send_dns_key_for_publish(char *domain_name, char *ip, char *sha_key)
         std::ifstream f2(filename.c_str());
 	std::ifstream ftime(filename_time.c_str());
 	size_t position_lkp;
-	char *get_line_from_file = new char[BUFFLEN];
 	struct stat stat_buf;
 	int rc = stat(filename.c_str(), &stat_buf);
 	char *time=NULL;
 	char sha_input[50];
+	char get_line_from_file[BUFFLEN];
 	if(stat_buf.st_size > 0)
          {
 
 		std::cout<<"String found, returning without adding"<<std::endl;
+		strcpy(sha_key,"DUPLICATE DOMAIN");
 		return;
 	}
 		
@@ -377,8 +379,8 @@ void send_dns_key_for_publish(char *domain_name, char *ip, char *sha_key)
 	strcpy(exec_NULL_global,exec_command);
 	strcpy(exec_NULL_local,exec_command_local);
 	
-	strcat(exec_command,ip);
-	strcat(exec_command_local,ip);
+	strcat(exec_command,new_ip);
+	strcat(exec_command_local,new_ip);
 	
 	strcat(exec_NULL_global,null_entry);
 	strcat(exec_NULL_local,null_entry);
@@ -404,6 +406,213 @@ void send_dns_key_for_publish(char *domain_name, char *ip, char *sha_key)
 	}
 	
 }	
+
+void send_dns_key_for_append(char *domain_name,char *new_ip, char *am_sha_key, char *sha_key)
+{
+	char command[1024];
+        char exec_command[1024];
+        char exec_command_local[1024];
+        char exec_NULL_local[1024];
+        char exec_NULL_global[1024];
+        bool return_f;
+	char *time=NULL;
+	std::string filename_time = "time1.txt";
+	std::ifstream ftime(filename_time.c_str());
+	struct stat stat_buf;
+	char sha_input[50];
+	char get_line_from_file[BUFFLEN];	
+	sprintf(command, "sh get_time.sh %s",domain_name);
+        system(command);
+	
+	int rc = stat(filename_time.c_str(), &stat_buf);	
+	
+	if(stat_buf.st_size > 0)
+        {
+		if(ftime.is_open())
+        	{
+                	ftime.getline(get_line_from_file,BUFFLEN,',');
+               	 	time=&get_line_from_file[12];   //get_line_from_file="blocktime":102737382
+                	strcpy(sha_input,domain_name);
+                	strcat(sha_input,time);
+                	create_key(sha_input,sha_key);
+			std::cout<<"IN append "<<am_sha_key<<" "<<sha_key<<std::endl;
+			if(!strcmp(sha_key,am_sha_key))
+			{
+				strcpy(exec_command,"multichain-cli chain1 publish globalstream ");
+			        strcpy(exec_command_local,"multichain-cli chain1 publish localstream ");
+
+				
+        			strcat(exec_command,domain_name);
+        			strcat(exec_command," ");
+
+        			strcat(exec_command_local,domain_name);
+        			strcat(exec_command_local," ");
+				
+				strcat(exec_command,new_ip);
+        			strcat(exec_command_local,new_ip);
+				
+				system(exec_command);
+        			system(exec_command_local);
+		
+			}
+			else
+			{
+                		strcpy(sha_key,"BAD KEY");
+                		return;
+			}
+				
+        	}	
+		
+		sleep(20);
+		ftime.seekg (0, ftime.beg);
+		memset(sha_key,0,300);
+		system(command);	//get the last timestamp
+		memset(get_line_from_file,0,BUFFLEN);
+		if(ftime.is_open())
+                {
+                 	std::cout<<"In file open "<<std::endl;
+			ftime.getline(get_line_from_file,BUFFLEN,',');
+                        time=&get_line_from_file[12];   //get_line_from_file="blocktime":102737382
+			std::cout<<"In file open"<<domain_name<<" "<<time<<std::endl;
+                        strcpy(sha_input,domain_name);
+                        strcat(sha_input,time);
+                        create_key(sha_input,sha_key);
+                 
+                }
+
+
+        }
+	else
+	{	
+	 	std::cout<<"String found, returning without adding"<<std::endl;
+                strcpy(sha_key,"BAD DOMAIN");
+                return;
+	}
+
+}
+
+void send_dns_key_for_modify(char *domain_name,char *old_ip,char *new_ip,char *am_sha_key,char *sha_key)
+{
+	char command[1024];
+        char exec_command[1024];
+        char exec_command_local[1024];
+        char exec_NULL_local[1024];
+        char exec_NULL_global[1024];
+        bool return_f;
+        char *time=NULL;
+        std::string filename_time = "time1.txt";
+        std::ifstream ftime(filename_time.c_str());
+        struct stat stat_buf;
+        char sha_input[50];
+        char get_line_from_file[BUFFLEN];
+	std::string filename_modify = "out3.txt";
+	std::ifstream fmod(filename_modify.c_str());
+	sprintf(command, "sh global_str.sh %s",domain_name);
+        system(command);
+	std::vector <std::string> ip_vector;
+	bool foundIp=false;
+        int rc = stat(filename_time.c_str(), &stat_buf);
+	
+	
+	if(stat_buf.st_size > 0)
+        {
+                if(ftime.is_open())
+                {
+                        ftime.getline(get_line_from_file,BUFFLEN,',');
+                        time=&get_line_from_file[12];   //get_line_from_file="blocktime":102737382
+                        strcpy(sha_input,domain_name);
+                        strcat(sha_input,time);
+                        create_key(sha_input,sha_key);
+                        std::cout<<"IN modify time "<<am_sha_key<<" "<<sha_key<<std::endl;
+                        if(!strcmp(sha_key,am_sha_key))
+                        {
+				memset(command,0,BUFFLEN);
+				strcpy(command,"sh modify.sh");
+				system(command);
+                        }
+			else
+                        {
+                                strcpy(sha_key,"BAD KEY");
+                                return;
+                        }
+
+			
+
+                }
+
+
+
+        }
+        else
+        {
+                std::cout<<"String found, returning without adding"<<std::endl;
+                strcpy(sha_key,"BAD DOMAIN");
+                return;
+        }
+sleep(5);	
+	 if(fmod.is_open())
+         {       
+                                        memset(get_line_from_file,0,BUFFLEN);
+                                        for(int i = 0; fmod.getline(get_line_from_file,BUFFLEN);i++)
+                                        {        
+                                                 
+                                                std::cout<<"reading from out"<<get_line_from_file<<std::endl;
+                                                if(!(strcmp(get_line_from_file,old_ip)))
+                                                {       
+                                                        std::cout<<"reading from out"<<get_line_from_file<<std::endl;
+                                                        memset(get_line_from_file,0,BUFFLEN);
+                                                        strcpy(get_line_from_file,new_ip);
+                                                        foundIp=true;
+                                                 
+                                                }
+                                                
+                                                ip_vector.push_back(get_line_from_file);
+                                         
+                                        }
+                                        
+                                        if(!foundIp)
+                                        {       
+                                                strcpy(sha_key,"BAD IP for modify");
+                                                return;
+                                        }
+                                }
+
+                                for(int i=ip_vector.size()-1;i>=0;i--)
+                                {
+                                        memset(exec_command,0,BUFFLEN);
+                                        memset(exec_command_local,0,BUFFLEN);
+                                        strcpy(exec_command,"multichain-cli chain1 publish globalstream ");
+                                        strcpy(exec_command_local,"multichain-cli chain1 publish localstream ");
+                                        strcat(exec_command,domain_name);
+                                        strcat(exec_command_local,domain_name);
+                                        strcat(exec_command," ");
+                                        strcat(exec_command_local," ");
+                                        strcat(exec_command,(ip_vector[i]).c_str());
+                                        strcat(exec_command_local,ip_vector[i].c_str());
+
+                                        system(exec_command);
+                                        system(exec_command_local);
+                  }
+ 		sleep(20);
+                ftime.seekg (0, ftime.beg);
+                memset(sha_key,0,300);
+		memset(command,0,BUFFLEN);
+		sprintf(command, "sh get_time.sh %s",domain_name);
+                system(command);        //get the last timestamp
+                memset(get_line_from_file,0,BUFFLEN);
+                if(ftime.is_open())
+                {
+                        ftime.getline(get_line_from_file,BUFFLEN,',');
+                        time=&get_line_from_file[12];   //get_line_from_file="blocktime":102737382
+                        strcpy(sha_input,domain_name);
+                        strcat(sha_input,time);
+                        create_key(sha_input,sha_key);
+
+                }
+
+
+
+}
 int main()
 {
 
@@ -427,16 +636,22 @@ int main()
 	memset(old_ip,0,10);
 	char *token=NULL;
 	char sha_key[300];
+	char am_sha_key[300];
 	
 	udp_server *u1=new udp_server("172.31.3.44",10000);
 	Lookup *l1 = new Lookup();//"GUNS.txt");
 	l1->populate_map_from_stream(BUFFLEN);
 	while(1)
 	{
+		memset(buffer,0,BUFFLEN);
 		u1->myrecvfrom(buffer,BUFFLEN,&si_other,&slen);
 		std::cout<<"Received "<<buffer<<std::endl;
 		// Join Message Response
-		
+		memset(domain_name,0,1024);
+		 memset(new_ip,0,10);
+		 memset(old_ip,0,10);		
+		memset(sha_key,0,300);
+		memset(am_sha_key,0,300);
 		token=strtok(buffer,":");
 		
 		if(!strcmp(token,"JOIN"))
@@ -473,11 +688,36 @@ int main()
 				token=strtok(NULL,":");
                                 strcpy(domain_name,token);
                                 token=strtok(NULL,":");
+                                strcpy(new_ip,token);
+				token=strtok(NULL,":");
+				strcpy(am_sha_key,token);
+				
+				send_dns_key_for_append(domain_name,new_ip,am_sha_key,sha_key);
+				buff=new char[BUFFLEN];
+                                strcpy(buff, "SUCCESS ");
+                                strcat(buff, sha_key);
+                                std::cout<<"Publish append exits "<<buff <<std::endl;
+						
+			}	
+			else if(!strcmp(token,"MODIFY"))
+			{
+				std::cout<<"MODIFY"<<std::endl;
+				token=strtok(NULL,":");
+				strcpy(domain_name,token);
+				token=strtok(NULL,":");
                                 strcpy(old_ip,token);
 				token=strtok(NULL,":");
                                 strcpy(new_ip,token);
-						
-			}	
+				token=strtok(NULL,":");
+                                strcpy(am_sha_key,token);
+				
+				send_dns_key_for_modify(domain_name,old_ip,new_ip,am_sha_key,sha_key);
+			 	buff=new char[BUFFLEN];
+                                strcpy(buff, "SUCCESS ");
+                                strcat(buff, sha_key);
+                                std::cout<<"Publish append exits "<<buff <<std::endl;
+					
+			}
 			if(u1->mysendto(buff,BUFFLEN,&si_other,slen)<0)
 				perror("Error in send");
 				
